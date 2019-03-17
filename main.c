@@ -106,7 +106,7 @@ int main (int argc, char *argv[]) {
      	}
 	
 	//alarm for 2 real life second
-	alarm(timer);
+//	alarm(timer);
 	forkProcess(maxChildProcess, numberChildProcess,inputFileName,outputFileName,increment,argv[0]);
 		
 		
@@ -163,10 +163,80 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	fclose(f1);
 	int indexOfTheString = 0;
 
+	//check how many times fork();
+	int forkNumber = 1;
+	double checkFork =0;
 
+	if(lines % 5 == 0 ) {
+		forkNumber = lines / 5 ;		
+		if(forkNumber > 20) {
+			fprintf(stderr, "Fork Number is too much");
+			return 0;
+		}
+	} else {
+	
+		forkNumber = lines / 5 ;		
+		if(forkNumber > 20) {
+			fprintf(stderr, "Fork Number is too much");
+			return 0;
+		}
 
-	while(totalCount < lines ){ 	
+		checkFork  = lines / 5.0;
+
+		if(checkFork > 1 && checkFork < 2) {
+			forkNumber = 2; 			
+		} else if(checkFork > 2 && checkFork < 3) {
+			forkNumber = 3; 			
+		} else if(checkFork > 3 && checkFork < 4) {
+			forkNumber = 4; 			
+		} else if(checkFork > 4 && checkFork < 5) {
+			forkNumber = 5; 			
+		} else if(checkFork > 5 && checkFork < 6) {
+			forkNumber = 6; 			
+		} else if(checkFork > 6 && checkFork < 7) {
+			forkNumber = 7; 			
+		} else if(checkFork > 7 && checkFork < 8) {
+			forkNumber = 8; 			
+		} else if(checkFork > 8 && checkFork < 9) {
+			forkNumber = 9; 			
+		} else if(checkFork > 9 && checkFork < 10) {
+			forkNumber = 10; 			
+		} else if(checkFork > 10 && checkFork < 11) {
+			forkNumber = 11; 			
+		} else if(checkFork > 11 && checkFork < 12) {
+			forkNumber = 12; 			
+		} else if(checkFork > 12 && checkFork < 13) {
+			forkNumber = 13; 			
+		} else if(checkFork > 13 && checkFork < 14) {
+			forkNumber = 14; 			
+		} else if(checkFork > 14 && checkFork < 15) {
+			forkNumber = 15; 			
+		} else if(checkFork > 15 && checkFork < 16) {
+			forkNumber = 16; 			
+		} else if(checkFork > 16 && checkFork < 17) {
+			forkNumber = 17; 			
+		} else if(checkFork > 17 && checkFork < 18) {
+			forkNumber = 18; 			
+		} else if(checkFork > 18 && checkFork < 19) {
+			forkNumber = 19; 			
+		} else if(checkFork > 19 && checkFork < 20) {
+			forkNumber = 20; 			
+		}
+		printf("forkNumber is %d", forkNumber);
 		
+	}
+
+	printf("fork number %d\n", forkNumber);
+
+	while(totalCount < forkNumber ){ 	
+						
+			if(numChildProcess == ptr_count) {
+				//childpid=wait(&status);
+				printf("%d, child terminated\n",childpid);
+				ptr_count--;
+			}
+
+
 			
 			childpid=fork();
 
@@ -176,24 +246,16 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 			if(childpid < 0) {
 				perror("Fork failed");
 			} else if(childpid == 0) {
-				 execl ("./user", "user", NULL);
-				//char *buffer1;
-				//sprintf(buffer1, "%d", indexOfTheString);
-				//printf("%d, forkProcess\n", getpid());
-				//execl("./user","user","test",(char *)0);
+				 
+				char *buffer1[bufSize];
+				sprintf(buffer1, "%d", indexOfTheString);
+				execl("./palin","palin",buffer1,(char *)0);
 		
 				snprintf(errorMessage, sizeof(errorMessage), "%s: Error: ", arg0Name);
-	     			perror(errorMessage);	
-				
+	     			perror(errorMessage);		
 				exit(0);
 			} else {
-						
-				if(numChildProcess == ptr_count) {
-					childpid=wait(&status);
-					printf("%d, child terminated\n",childpid);
-					ptr_count--;
-				}
-
+					
 			}
 	
 			indexOfTheString++;
