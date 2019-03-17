@@ -23,7 +23,7 @@ void signalCallback (int signum);
 int isPalindrome(char *str);
 
 sem_t *sems;
-char *semName = "semaphore";
+char *semName = "./semaphore";
 
 typedef struct {
 	char text[100];
@@ -45,25 +45,41 @@ int main (int argc, char *argv[]) {
 	}
 
 	CharArray *shared = shmat(shmid, NULL, 0);
+
+
 	
-	sems = sem_open(semName, 1);
-        if(sems == SEM_FAILED){
-                perror("sem_open in user failed\n");
-                exit(errno);
-        }    
+	sem_init(&sems, 0, 1);	
 
-	//printf("%c", shared[0].text[strlen(shared[0].text)-1]);
-/*
-	int flag = 0;
+	int index = atoi(argv[1]);
+
+
+	//entering critical section
 		
-	if(isPalindrome(shared[0].text) == 0) {
-			char nameFileForPalinOrNot == 
-			sem_wait(sem);
-	}
+		sleep(2);
+		if(isPalindrome(shared[index].text) == 0) {
+			
+			nameFileForPalinOrNot = &noPalinName;
+			sem_wait(&sems);
+		} else {
+
+			nameFileForPalinOrNot = &palinName;
+			sem_wait(&sems);
+		}
+
+		FILE *f = fopen(nameFileForPalinOrNot, "a");
+
+		
+		fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
+
+		fclose(f);
+		sleep(2);
+		sem_post(&sems);
 
 
 
-			sem_post(sem);
+//	sem_post(sems);
+	
+/*			sem_post(sem);
 			flag = 1;
 			break;
 		}
@@ -74,8 +90,8 @@ int main (int argc, char *argv[]) {
 
 	printf("%d", getpid());
 	isPalindrome(shared[0].text);
+*/
 
-*/	
 	//struct CharArray *shared =  malloc(sizeof(struct CharArray));
 
 	//shmid = shmget(IPC_PRIVATE, 1000 * sizeof(shared->text[0]), IPC_CREAT | 0644);
@@ -103,7 +119,6 @@ int  isPalindrome(char *str) {
                       } 
                  }
 
-               printf("%s is palindrome\n", str); 
 	return 1;
 } 
 	
