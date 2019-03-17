@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <signal.h>
 #include <ctype.h>
 #include <string.h>
 #include <unistd.h>
@@ -20,7 +21,7 @@ int timer = 2;
 int shmid;
 int *shmPtr;
 typedef struct {
-	char text[100][64];
+	char text[100];
 } CharArray;
 
 CharArray *shared;
@@ -36,7 +37,6 @@ int main (int argc, char *argv[]) {
 	int c;
 	int maxChildProcess = 4;
 	int numberChildProcess = 2;
-
 	
 
 	//getopt command for command line
@@ -115,7 +115,6 @@ int main (int argc, char *argv[]) {
 
 void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, char *outputFileName,int increment,char *arg0Name) {
 		
-	char * args[2];
 	int bufSize = 100;
 	char buffer[bufSize];
 		
@@ -136,6 +135,8 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
             	exit(2);	
         }
 	
+	
+	
 	FILE *f1 = fopen(inputFileName, "r");
 
 	if(f1 == NULL){
@@ -143,36 +144,56 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	     	perror(errorMessage);	
 		return;
 	}
-		
+	
+	int lines = countLines(f1);
+	int index = 0;	
 
-
-/*
+	//string to shared memory
 	while(fgets(buffer,bufSize,f1)!= 0){ 
 
-
-		printf("%s",buffer);
-
+		strcpy(shared[index].text, buffer);
+		shared[index].text[strlen(buffer)-1] = '\0';
+		index++;
 	}
 
-	line = countLines(f1);
-*/
-	
 
-	childpid=fork();
+	fclose(f1);	
+
 	int status;
+	int looping = 0;
 
-	if(childpid == 0) {
+	while(looping < lines) {
+		
+		if(numChildProcess  == ptr_count ) {
+			childpid = wait(&status);
+			looping += ptr_count;
+			ptr_count--;
+			printf("%d terminated\n",childpid);
+		}
 
-		execl ("./user", "user", NULL); 
-		//execl("./user","user",duration,outputFileName,(char *)0);
-				 
-	} else {
-		wait(&status);
-	} 
+		childpid=fork();
+		ptr_count++;
+		
+		if(childpid < 0) {
+
+			perror("Fork failed");
+
+		} else if(childpid == 0) {
+			execl ("./user", "user", NULL); 
+			//execl("./user","user",duration,outputFileName,(char *)0);
+			exit(0);	 
+		} else {
+			//wait(&status);
+		} 
+	}
+	
+	while(waitpid(-1, &status, WNOHANG) == 0){
+		childpid = wait(&status);
+		printf("all child done\n");
+	}
 
 	shmdt(shared); //detaches a section of shared memory
-    	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    
-		
+    	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
  }
 
 
@@ -196,8 +217,8 @@ void signalCall(int signum)
     }
     kill(0, SIGTERM);
     //clean up program before exit (via interrupt signal)
-  //  shmdt(shmPtr); //detaches a section of shared memory
-   // shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory
+    //  shmdt(shmPtr); //detaches a section of shared memory
+    // shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory
    
       exit(EXIT_SUCCESS);
  }
