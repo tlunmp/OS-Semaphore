@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <time.h>
 
 #define SHMKEY 9784
 
@@ -46,36 +47,49 @@ int main (int argc, char *argv[]) {
 
 	CharArray *shared = shmat(shmid, NULL, 0);
 
+	time_t current_time;
 
+	if (current_time == ((time_t)-1))
+    	{
+        	(void) fprintf(stderr, "Failure to obtain the current time.\n");
+       		 exit(EXIT_FAILURE);
+    	}
 	
+        char * c_time_string = ctime(&current_time);
+
+	int lines = atoi(argv[2]);
+
 	sem_init(&sems, 0, 1);	
 
 	int index = atoi(argv[1]);
 
 
 	//entering critical section
-		
+	int i;
+	for (i = 0; i < 5; i++ ) {	
 		sleep(2);
-		if(isPalindrome(shared[index].text) == 0) {
-			
+		
+		if(index > lines-1) {
+			break;
+		}
+
+		if(isPalindrome(shared[index].text) == 0) {	
 			nameFileForPalinOrNot = &noPalinName;
 			sem_wait(&sems);
 		} else {
-
 			nameFileForPalinOrNot = &palinName;
 			sem_wait(&sems);
 		}
 
 		FILE *f = fopen(nameFileForPalinOrNot, "a");
-
-		
 		fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
 
 		fclose(f);
-		sleep(2);
 		sem_post(&sems);
+		sleep(2);
+		index++;
 
-
+	}
 
 //	sem_post(sems);
 	
@@ -114,7 +128,6 @@ int  isPalindrome(char *str) {
                        
 		while (h > l) { 
                      if (str[l++] != str[h--]) { 
-                               printf("%s is Not Palindrome\n", str); 
                                 return 0; 
                       } 
                  }
