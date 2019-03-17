@@ -175,14 +175,15 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 		}
 	} else {
 	
-		forkNumber = lines / 5 ;		
-		if(forkNumber > 20) {
+		int forkNumberCheck = lines / 5 ;		
+		if(forkNumberCheck > 20) {
 			fprintf(stderr, "Fork Number is too much");
 			return 0;
 		}
-
+		
+			
 		checkFork  = lines / 5.0;
-
+	
 		if(checkFork > 1 && checkFork < 2) {
 			forkNumber = 2; 			
 		} else if(checkFork > 2 && checkFork < 3) {
@@ -222,21 +223,17 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 		} else if(checkFork > 19 && checkFork < 20) {
 			forkNumber = 20; 			
 		}
-		printf("forkNumber is %d", forkNumber);
 		
 	}
 
 	printf("fork number %d\n", forkNumber);
-
-	while(totalCount < forkNumber ){ 	
-						
+	
+	while(totalCount < forkNumber ){ 					
 			if(numChildProcess == ptr_count) {
 				//childpid=wait(&status);
 				printf("%d, child terminated\n",childpid);
 				ptr_count--;
 			}
-
-
 			
 			childpid=fork();
 
@@ -249,7 +246,9 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 				 
 				char *buffer1[bufSize];
 				sprintf(buffer1, "%d", indexOfTheString);
-				execl("./palin","palin",buffer1,(char *)0);
+				char *buffer2[bufSize];
+				sprintf(buffer2, "%d", lines);
+				execl("./palin","palin",buffer1,buffer2,(char *)0);
 		
 				snprintf(errorMessage, sizeof(errorMessage), "%s: Error: ", arg0Name);
 	     			perror(errorMessage);		
@@ -257,9 +256,8 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 			} else {
 					
 			}
-	
-			indexOfTheString++;
-
+			
+			indexOfTheString += 5;
 	}
 
 	while(waitpid(-1, &status, WNOHANG) == 0)
@@ -268,6 +266,7 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 					printf("%d, child terminated\n",childpid);
 	}
 		
+
 
 /*	
 	//string to shared memory
