@@ -118,10 +118,15 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	int bufSize = 100;
 	char buffer[bufSize];
 		
-	pid_t childpid;
+	pid_t childpid =0;
 	int ptr_count = 0;
 	char errorMessage[1000];
-	
+
+	int index = 0;	
+	int status;
+	int totalCount = 0;
+
+
 	shmid = shmget(SHMKEY, 5  * sizeof(CharArray), IPC_CREAT | 0777);
 	if(shmid < 0) {
 		printf("//shmget failed in master\n");	
@@ -146,51 +151,103 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	}
 	
 	int lines = countLines(f1);
-	int index = 0;	
 
-	//string to shared memory
-	while(fgets(buffer,bufSize,f1)!= 0){ 
 
+
+	while(fgets(buffer,bufSize,f1) != NULL){ 
 		strcpy(shared[index].text, buffer);
 		shared[index].text[strlen(buffer)-1] = '\0';
 		index++;
 	}
 
+	fclose(f1);
+	int indexOfTheString = 0;
 
-	fclose(f1);	
 
-	int status;
-	int looping = 0;
 
-	while(looping < lines) {
+	while(totalCount < lines ){ 	
 		
-		if(numChildProcess  == ptr_count ) {
-			childpid = wait(&status);
-			looping += ptr_count;
-			ptr_count--;
-			printf("%d terminated\n",childpid);
-		}
+			
+			childpid=fork();
 
+			ptr_count++;
+			totalCount++;
+		
+			if(childpid < 0) {
+				perror("Fork failed");
+			} else if(childpid == 0) {
+				 execl ("./user", "user", NULL);
+				//char *buffer1;
+				//sprintf(buffer1, "%d", indexOfTheString);
+				//printf("%d, forkProcess\n", getpid());
+				//execl("./user","user","test",(char *)0);
+		
+				snprintf(errorMessage, sizeof(errorMessage), "%s: Error: ", arg0Name);
+	     			perror(errorMessage);	
+				
+				exit(0);
+			} else {
+						
+				if(numChildProcess == ptr_count) {
+					childpid=wait(&status);
+					printf("%d, child terminated\n",childpid);
+					ptr_count--;
+				}
+
+			}
+	
+			indexOfTheString++;
+
+	}
+
+	while(waitpid(-1, &status, WNOHANG) == 0)
+	{
+		childpid=wait(&status);
+					printf("%d, child terminated\n",childpid);
+	}
+		
+
+/*	
+	//string to shared memory
+	while(fgets(buffer,bufSize,f1) != NULL){ 
+		strcpy(shared[index].text, buffer);
+		shared[index].text[strlen(buffer)-1] = '\0';
+	
 		childpid=fork();
 		ptr_count++;
-		
+
 		if(childpid < 0) {
 
 			perror("Fork failed");
 
 		} else if(childpid == 0) {
-			execl ("./user", "user", NULL); 
-			//execl("./user","user",duration,outputFileName,(char *)0);
+			//execl ("./user", "user", NULL);
+			//char *buffer1;
+			//sprintf(buffer1, "%d", indexOfTheString);
+			//execl("./user","user","test",(char *)0);
+			printf("%d, child fork\n",getpid());
 			exit(0);	 
 		} else {
-			//wait(&status);
-		} 
+		}
+ 	
+		if(waitpid(0, NULL, WNOHANG) > 0){
+			ptr_count--;
+			printf("%d terminated\n",childpid);
+		}
+
+
+		index++;
 	}
-	
-	while(waitpid(-1, &status, WNOHANG) == 0){
-		childpid = wait(&status);
-		printf("all child done\n");
-	}
+
+
+
+	fclose(f1);	
+
+	int indexOfTheString = 0;
+
+
+*/
+		
 
 	shmdt(shared); //detaches a section of shared memory
     	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
