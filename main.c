@@ -7,7 +7,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>	
+#include <semaphore.h>
 #include <sys/shm.h>
+#include <fcntl.h>
 #define SHMKEY 9784
 
 void helpMenu();
@@ -19,12 +21,16 @@ void signalCall(int signum);
 
 int timer = 2;
 int shmid;
-int *shmPtr;
+
+
 typedef struct {
 	char text[100];
 } CharArray;
 
 CharArray *shared;
+sem_t *shmPalin;
+sem_t *shmNotPalin;
+sem_t *shmPtr;
 
 int main (int argc, char *argv[]) {
 
@@ -140,8 +146,38 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
             	exit(2);	
         }
 	
-	
-	
+/*	
+	int shmShmid = shmget(SHMKEY+1, 5  * sizeof(sem_t)*2, IPC_CREAT | 0777);
+	if(shmid < 0) {
+		printf("//shmget failed in master\n");	
+		exit(1);	
+	}
+
+	shmPtr = shmat(shmid, NULL, 0);
+
+	if(shmPtr == -1 ){
+            	printf("shmat failed in master");
+            	exit(2);	
+        }
+*/
+
+	shmNotPalin = sem_open("NotPalin", O_CREAT , 0644, 1);
+	if (shmNotPalin == SEM_FAILED) {
+     		perror("Failed to open semphore for shmNotPalin");
+     		exit(-1);
+	}
+
+	shmPalin =  sem_open("Palin", O_CREAT , 0644, 1);
+	if (shmPalin == SEM_FAILED) {
+     		sem_close(shmNotPalin);
+     		perror("Failed to open semphore for shmPalin");
+     		exit(-1);
+	}
+
+/*
+	sem_init(shmPtr, 1 ,1);
+	sem_init(shmPtr+1, 1,1);
+*/	
 	FILE *f1 = fopen(inputFileName, "r");
 
 	if(f1 == NULL){
@@ -226,30 +262,33 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 		
 	}
 
-	printf("fork number %d\n", forkNumber);
 	
-	while(totalCount < forkNumber ){ 					
-			if(numChildProcess == ptr_count) {
-				//childpid=wait(&status);
-				printf("%d, child terminated\n",childpid);
+	while(totalCount < lines ){ 					
+				
+			if(waitpid(0,NULL, WNOHANG)> 0)
 				ptr_count--;
-			}
-			
-			childpid=fork();
 
-			ptr_count++;
+
+
+
+
+			if(ptr_count < 20 && indexOfTheString < lines){
+				ptr_count++;
 			totalCount++;
 		
+			childpid=fork();
 			if(childpid < 0) {
 				perror("Fork failed");
 			} else if(childpid == 0) {
 				 
+			//	execl("./palin","palin",NULL);
 				char *buffer1[bufSize];
 				sprintf(buffer1, "%d", indexOfTheString);
 				char *buffer2[bufSize];
 				sprintf(buffer2, "%d", lines);
+			
 				execl("./palin","palin",buffer1,buffer2,(char *)0);
-		
+
 				snprintf(errorMessage, sizeof(errorMessage), "%s: Error: ", arg0Name);
 	     			perror(errorMessage);		
 				exit(0);
@@ -258,15 +297,15 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 			}
 			
 			indexOfTheString += 5;
+			}
 	}
-
-	while(waitpid(-1, &status, WNOHANG) == 0)
-	{
-		childpid=wait(&status);
-					printf("%d, child terminated\n",childpid);
-	}
+/*	while(waitpid(-1, &status, WNOHANG) == 0)
+		{
+			childpid=wait(&status);
+						printf("%d, child terminated\n",childpid);
+		}
 		
-
+*/
 
 /*	
 	//string to shared memory
@@ -309,7 +348,9 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 
 */
 		
-
+	sem_unlink(shmPalin);
+	sem_unlink(shmNotPalin);
+	
 	shmdt(shared); //detaches a section of shared memory
     	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
  }
@@ -333,10 +374,12 @@ void signalCall(int signum)
         else if (WIFSTOPPED(status))    /* child was stopped */
                 printf("User process was stopped by signal %d\n", WIFSTOPPED(status));
     }
-    kill(0, SIGTERM);
+    	sem_unlink(shmPalin);
+	sem_unlink(shmNotPalin);
+	kill(0, SIGTERM);
     //clean up program before exit (via interrupt signal)
-    //  shmdt(shmPtr); //detaches a section of shared memory
-    // shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory
+    shmdt(shared); //detaches a section of shared memory
+    shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory
    
       exit(EXIT_SUCCESS);
  }
