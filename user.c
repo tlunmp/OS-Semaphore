@@ -30,13 +30,13 @@ typedef struct {
 	char text[100];
 } CharArray;
 
+CharArray *shared;
 
 sem_t *shmPalin;
 sem_t *shmNotPalin;
 
 
 int main (int argc, char *argv[]) {	
-
 
 	char *palinName = "palin.out";
 	char *noPalinName = "nopalin.out";	
@@ -50,7 +50,7 @@ int main (int argc, char *argv[]) {
 		exit(errno);
 	}
 
-	CharArray *shared = shmat(shmid, NULL, 0);
+	shared = shmat(shmid, NULL, 0);
 	
 	//get the semaphore for palin
 	shmPalin = sem_open("Palin", 0);
@@ -252,7 +252,7 @@ void signalCallback (int signum)
     	//Cleanup
 	sem_unlink("Palin");
 	sem_unlink("notPalin");
-        shmdt(shmPtr);
+        shmdt(shared);
         shmctl(shmid,IPC_RMID, NULL);
         exit(0);
 }

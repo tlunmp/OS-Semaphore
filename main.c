@@ -110,8 +110,7 @@ int main (int argc, char *argv[]) {
 	//alarm for 25 real life second
 	alarm(timer);
 	forkProcess(maxChildProcess, numberChildProcess,inputFileName,outputFileName,increment,argv[0]);
-		
-		
+ 			
 	return 0;
 }	
 
