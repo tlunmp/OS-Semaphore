@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <time.h>
-
+#define SIZE 256
 #define SHMKEY 9784
 
 int shmid;
@@ -34,15 +34,15 @@ typedef struct {
 sem_t *shmPalin;
 sem_t *shmNotPalin;
 
-#define SIZE 256
 
 int main (int argc, char *argv[]) {	
 
 
-	char palinName[] = "palin.out";
-	char noPalinName[] = "nopalin.out";	
+	char *palinName = "palin.out";
+	char *noPalinName = "nopalin.out";	
 	char *nameFileForPalinOrNot;
 
+	// get the key from the shared memory
 	shmid = shmget(SHMKEY, 5  * sizeof(CharArray), IPC_CREAT | 0777);
 	
 	if(shmid < 0) {
@@ -51,119 +51,177 @@ int main (int argc, char *argv[]) {
 	}
 
 	CharArray *shared = shmat(shmid, NULL, 0);
-
-//	shmPtr = shmat(atoi(argv[3]),NULL, 0);
-
 	
+	//get the semaphore for palin
 	shmPalin = sem_open("Palin", 0);
 
+	//error if palin semaphore failed
+	if(shmPalin == SEM_FAILED){
+              perror("User: sem_open failed\n");
+        }
+
+	//get eh semaphore for notpalin
 	shmNotPalin = sem_open("NotPalin", 0);
 
-//	sem_close(shmNotPalin);
-//	sem_close(shmPalin);
-
-	time_t current_time;
-
-	if (current_time == ((time_t)-1))
-    	{
-        	(void) fprintf(stderr, "Failure to obtain the current time.\n");
-       		 exit(EXIT_FAILURE);
-    	}
-	
-        char * c_time_string = ctime(&current_time);
-
+	//error if palin semaphore get failed
+	if(shmNotPalin == SEM_FAILED){
+              perror("User: sem_open failed\n");
+        }
 
 
 	int lines = atoi(argv[2]);
-
-	char buffer[SIZE];
-  	time_t curtime;
-  	struct tm *loctime;
-
-  	/* Get the current time. */
-  	curtime = time (NULL);
-
-  	/* Convert it to local time representation. */
- 	 loctime = localtime (&curtime);
-
-
-
-	
-	//sem_init(&sems, 0, 1);	
-
 	int index = atoi(argv[1]);
 
-
-	//entering critical section
 	int i;
-	int isPalinDrom;
-	int isNotPalin;
+	int isPalinDrom = 0;
 
+	//iterate to 5 lines and check if it is palindrom or not, and print it to a specific file
 	for (i = 0; i < 5; i++ ) {		
+	
+ 	 	 time_t rawtime; 
+	 	 struct tm *ptm;
+   
 		if(index > lines-1) {
 			break;
 		}
 
-
-		sleep(2);
+		//chek if it is not palin drom else if it is palindrome do sem_post when entering the critical section
 		if(isPalindrome(shared[index].text) == 0) {	
-			isPalinDrom = 1;
-			nameFileForPalinOrNot = &noPalinName;
-			sem_wait(&shmNotPalin);
-		} else {
-			isNotPalin = 0;
-			nameFileForPalinOrNot = &palinName;
-			sem_wait(&shmPalin);
-		}
-
-		printf("%d, enter critical section ",getpid());
-		  	/* Print it out in a nice format. */
-  		fputs (asctime (loctime), stdout);
-
-
-		FILE *f = fopen(nameFileForPalinOrNot, "a");
-		fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
-
-		fclose(f);
+			isPalinDrom = 0;
+			nameFileForPalinOrNot = noPalinName;
+			sem_wait(shmNotPalin);
+				sleep(2);
 		
-
-		if(isPalinDrom == 0){
-			sem_post(&shmNotPalin);
+	
+			/* entering the critical section */	
+			rawtime = time(NULL);
+    
+			//time error
+   	 		if (rawtime == -1) {
+        	
+        			fprintf(stderr, "The time() function failed");
+        			return 1;
+    			}
+   	
+			ptm = localtime(&rawtime);
+		
+			//time error
+			if (ptm == NULL) {
+        
+        			fprintf(stderr,"The localtime() function failed");
+        			return 1;
+    			}
+    
+   	 		fprintf(stderr,"pid %d: Entering Critical Section  not palin on %02d:%02d:%02d\n", getpid(), ptm->tm_hour, 
+        		   ptm->tm_min, ptm->tm_sec);
 		} else {
-			sem_post(&shmPalin);
+
+			
+			isPalinDrom = 1;
+			nameFileForPalinOrNot = palinName;
+			sem_wait(shmPalin);
+		
+			/* entering the critical section */	
+			sleep(2);
+		
+			rawtime = time(NULL);
+   
+			//time error 
+    			if (rawtime == -1) {
+        		
+        			fprintf(stderr, "The time() function failed");
+        			return 1;
+    			}
+
+   			//print the time
+			ptm = localtime(&rawtime);
+			
+			//time error 
+			if (ptm == NULL) {
+        	
+        			fprintf(stderr, "The localtime() function failed");
+        			return 1;
+    			}
+    
+   	 		fprintf(stderr, "pid %d: Entering Critical Section palin on %02d:%02d:%02d\n", getpid(), ptm->tm_hour, 
+        		   ptm->tm_min, ptm->tm_sec);
 		}
-		sleep(2);
-		printf("%d, exit critical section\n",getpid());
-		//sem_post(&sems);
+
+		//critical section
+		FILE *f = fopen(nameFileForPalinOrNot, "a");
+		// if file open error and return
+		if(f == NULL){
+			fprintf(stderr,"%s: ", argv[0]);
+			perror("Error");
+			return 0;
+		}
+
+fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
+		fclose(f);
+
+		//chek if it is not palin drom else if it is palindrome do sem_post when exiting the critical section
+		if(isPalinDrom == 0){
+			sleep(2);
+
+
+			/* exiting critical section */
+			//get the time
+			rawtime= time(NULL);
+    
+			//time error
+    			if (rawtime == -1) {
+        	
+        			fprintf(stderr, "The time() function failed");
+      				  return 1;
+    			}
+    
+	 		ptm = localtime(&rawtime);
+    
+		 	 if (ptm == NULL) { 
+      				  fprintf(stderr, "The localtime() function failed");
+    				  return 1;
+    			}
+    
+  	  		fprintf(stderr, "pid %d: Exiting Critical Section notPalin on  %02d:%02d:%02d\n", getpid(),ptm->tm_hour, 
+        			ptm->tm_min, ptm->tm_sec);
+
+			sem_post(shmNotPalin);
+		} else {
+			sleep(2);
+
+			/* exiting critical section */
+			//get the time
+			rawtime= time(NULL);
+    
+			//time error
+    			if (rawtime == -1) {
+        
+        			fprintf(stderr,"The time() function failed");
+      				  return 1;
+    			}
+    
+ 			ptm = localtime(&rawtime);
+    
+
+	 		 if (ptm == NULL) { 
+      				  fprintf(stderr, "The localtime() function failed");
+    			 	 return 1;
+    			}
+    
+  	  		fprintf(stderr, "pid %d: Exiting Critical Section palin on  %02d:%02d:%02d\n", getpid(),ptm->tm_hour, 
+        		ptm->tm_min, ptm->tm_sec);
+
+			sem_post(shmPalin);
+		}
+
 		index++;
 
 	}
 
-//	sem_post(sems);
 	
-/*			sem_post(sem);
-			flag = 1;
-			break;
-		}
-		else{
-			sem_post(sem);
-			continue;
-		}
-
-	printf("%d", getpid());
-	isPalindrome(shared[0].text);
-*/
-
-	//struct CharArray *shared =  malloc(sizeof(struct CharArray));
-
-	//shmid = shmget(IPC_PRIVATE, 1000 * sizeof(shared->text[0]), IPC_CREAT | 0644);
-	
-	//shared = shmat(shmid, NULL, 0);
-	
-	
-
-	//printf("%s",shared->text[0]);
-	return 0;
+	shmdt(shared); //detaches a section of shared memory
+    	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
+ 	return 0;
 }
 
 
@@ -188,6 +246,9 @@ void signalCallback (int signum)
     printf("\nSIGTERM received by worker\n");
 
     //Cleanup
+
+	sem_unlink("Palin");
+	sem_unlink("notPalin");
         shmdt(shmPtr);
         shmctl(shmid,IPC_RMID, NULL);
         exit(0);

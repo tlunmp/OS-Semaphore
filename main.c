@@ -19,7 +19,7 @@ int countLines(FILE *file);
 
 void signalCall(int signum);
 
-int timer = 2;
+int timer = 25;
 int shmid;
 
 
@@ -55,12 +55,7 @@ int main (int argc, char *argv[]) {
 			case 'i':
 				strcpy(inputFileName, optarg);
 				break;
-			case 'o':
-				strcpy(outputFileName, optarg);
-				break;
 			case 'n': maxChildProcess = atoi(optarg);
-				break;
-			case 's':numberChildProcess = atoi(optarg);
 				break;
 			default:
 				fprintf(stderr, "%s: Error: Unknown option -%c\n",argv[0],optopt);
@@ -94,6 +89,7 @@ int main (int argc, char *argv[]) {
 	//if max child process over 20 error
 	if(maxChildProcess > 20){
 		fprintf(stderr,"%s: Error: Cannot have 20 or more max process\n",argv[0]);
+		return 0;
 	}	 
 
 
@@ -111,8 +107,8 @@ int main (int argc, char *argv[]) {
          	exit(errno);
      	}
 	
-	//alarm for 2 real life second
-//	alarm(timer);
+	//alarm for 25 real life second
+	alarm(timer);
 	forkProcess(maxChildProcess, numberChildProcess,inputFileName,outputFileName,increment,argv[0]);
 		
 		
@@ -129,44 +125,33 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	char errorMessage[1000];
 
 	int index = 0;	
-	int status;
 	int totalCount = 0;
 
 
+	//create a array of keyy
 	shmid = shmget(SHMKEY, 5  * sizeof(CharArray), IPC_CREAT | 0777);
 	if(shmid < 0) {
-		printf("//shmget failed in master\n");	
+		fprintf(stderr, "//shmget failed in master\n");	
 		exit(1);	
 	}
 
+	//attach address
 	shared = shmat(shmid, NULL, 0);
 
+	//check if error
 	if(shared == -1 ){
-            	printf("shmat failed in master");
+            	fprintf(stderr,"shmat failed in master");
             	exit(2);	
         }
 	
-/*	
-	int shmShmid = shmget(SHMKEY+1, 5  * sizeof(sem_t)*2, IPC_CREAT | 0777);
-	if(shmid < 0) {
-		printf("//shmget failed in master\n");	
-		exit(1);	
-	}
-
-	shmPtr = shmat(shmid, NULL, 0);
-
-	if(shmPtr == -1 ){
-            	printf("shmat failed in master");
-            	exit(2);	
-        }
-*/
-
+	//create a semaphore for not palin
 	shmNotPalin = sem_open("NotPalin", O_CREAT , 0644, 1);
 	if (shmNotPalin == SEM_FAILED) {
      		perror("Failed to open semphore for shmNotPalin");
      		exit(-1);
 	}
 
+	//create a semphore for palin
 	shmPalin =  sem_open("Palin", O_CREAT , 0644, 1);
 	if (shmPalin == SEM_FAILED) {
      		sem_close(shmNotPalin);
@@ -174,10 +159,7 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
      		exit(-1);
 	}
 
-/*
-	sem_init(shmPtr, 1 ,1);
-	sem_init(shmPtr+1, 1,1);
-*/	
+
 	FILE *f1 = fopen(inputFileName, "r");
 
 	if(f1 == NULL){
@@ -189,7 +171,7 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	int lines = countLines(f1);
 
 
-
+	//copies the string to the shared memory
 	while(fgets(buffer,bufSize,f1) != NULL){ 
 		strcpy(shared[index].text, buffer);
 		shared[index].text[strlen(buffer)-1] = '\0';
@@ -199,157 +181,46 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	fclose(f1);
 	int indexOfTheString = 0;
 
-	//check how many times fork();
-	int forkNumber = 1;
-	double checkFork =0;
+	//forks and process the child then pass the index and the lines.
 
-	if(lines % 5 == 0 ) {
-		forkNumber = lines / 5 ;		
-		if(forkNumber > 20) {
-			fprintf(stderr, "Fork Number is too much");
-			return 0;
-		}
-	} else {
-	
-		int forkNumberCheck = lines / 5 ;		
-		if(forkNumberCheck > 20) {
-			fprintf(stderr, "Fork Number is too much");
-			return 0;
-		}
-		
-			
-		checkFork  = lines / 5.0;
-	
-		if(checkFork > 1 && checkFork < 2) {
-			forkNumber = 2; 			
-		} else if(checkFork > 2 && checkFork < 3) {
-			forkNumber = 3; 			
-		} else if(checkFork > 3 && checkFork < 4) {
-			forkNumber = 4; 			
-		} else if(checkFork > 4 && checkFork < 5) {
-			forkNumber = 5; 			
-		} else if(checkFork > 5 && checkFork < 6) {
-			forkNumber = 6; 			
-		} else if(checkFork > 6 && checkFork < 7) {
-			forkNumber = 7; 			
-		} else if(checkFork > 7 && checkFork < 8) {
-			forkNumber = 8; 			
-		} else if(checkFork > 8 && checkFork < 9) {
-			forkNumber = 9; 			
-		} else if(checkFork > 9 && checkFork < 10) {
-			forkNumber = 10; 			
-		} else if(checkFork > 10 && checkFork < 11) {
-			forkNumber = 11; 			
-		} else if(checkFork > 11 && checkFork < 12) {
-			forkNumber = 12; 			
-		} else if(checkFork > 12 && checkFork < 13) {
-			forkNumber = 13; 			
-		} else if(checkFork > 13 && checkFork < 14) {
-			forkNumber = 14; 			
-		} else if(checkFork > 14 && checkFork < 15) {
-			forkNumber = 15; 			
-		} else if(checkFork > 15 && checkFork < 16) {
-			forkNumber = 16; 			
-		} else if(checkFork > 16 && checkFork < 17) {
-			forkNumber = 17; 			
-		} else if(checkFork > 17 && checkFork < 18) {
-			forkNumber = 18; 			
-		} else if(checkFork > 18 && checkFork < 19) {
-			forkNumber = 19; 			
-		} else if(checkFork > 19 && checkFork < 20) {
-			forkNumber = 20; 			
-		}
-		
-	}
-
-	
-	while(totalCount < lines ){ 					
+	while(totalCount < maxChildProcess && totalCount < lines ){ 					
 				
 			if(waitpid(0,NULL, WNOHANG)> 0)
 				ptr_count--;
 
-
-
-
-
 			if(ptr_count < 20 && indexOfTheString < lines){
 				ptr_count++;
-			totalCount++;
+				totalCount++;
 		
-			childpid=fork();
-			if(childpid < 0) {
-				perror("Fork failed");
-			} else if(childpid == 0) {
+				childpid=fork();
+
+				if(childpid < 0) {
+					perror("Fork failed");
+				} else if(childpid == 0) {
 				 
-			//	execl("./palin","palin",NULL);
-				char *buffer1[bufSize];
-				sprintf(buffer1, "%d", indexOfTheString);
-				char *buffer2[bufSize];
-				sprintf(buffer2, "%d", lines);
-			
-				execl("./palin","palin",buffer1,buffer2,(char *)0);
+					char buffer1[bufSize];
+					sprintf(buffer1, "%d", indexOfTheString);
 
-				snprintf(errorMessage, sizeof(errorMessage), "%s: Error: ", arg0Name);
-	     			perror(errorMessage);		
-				exit(0);
-			} else {
+					char buffer2[bufSize];
+					sprintf(buffer2, "%d", lines);
+				
+					//exec the index and lines tot he child
+					execl("./palin","palin",buffer1,buffer2,(char *)0);
+
+					snprintf(errorMessage, sizeof(errorMessage), "%s: Error: ", arg0Name);
+	    	 			perror(errorMessage);		
+					exit(0);
+				} else {
 					
-			}
+				}
 			
-			indexOfTheString += 5;
+				indexOfTheString += 5;
 			}
 	}
-/*	while(waitpid(-1, &status, WNOHANG) == 0)
-		{
-			childpid=wait(&status);
-						printf("%d, child terminated\n",childpid);
-		}
-		
-*/
 
-/*	
-	//string to shared memory
-	while(fgets(buffer,bufSize,f1) != NULL){ 
-		strcpy(shared[index].text, buffer);
-		shared[index].text[strlen(buffer)-1] = '\0';
-	
-		childpid=fork();
-		ptr_count++;
-
-		if(childpid < 0) {
-
-			perror("Fork failed");
-
-		} else if(childpid == 0) {
-			//execl ("./user", "user", NULL);
-			//char *buffer1;
-			//sprintf(buffer1, "%d", indexOfTheString);
-			//execl("./user","user","test",(char *)0);
-			printf("%d, child fork\n",getpid());
-			exit(0);	 
-		} else {
-		}
- 	
-		if(waitpid(0, NULL, WNOHANG) > 0){
-			ptr_count--;
-			printf("%d terminated\n",childpid);
-		}
-
-
-		index++;
-	}
-
-
-
-	fclose(f1);	
-
-	int indexOfTheString = 0;
-
-
-*/
-		
-	sem_unlink(shmPalin);
-	sem_unlink(shmNotPalin);
+	//unlink the semaphore		
+	sem_unlink("Palin");
+	sem_unlink("NotPalin");
 	
 	shmdt(shared); //detaches a section of shared memory
     	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
@@ -360,8 +231,9 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 void signalCall(int signum)
 {
     int status;
-  //  kill(0, SIGTERM);
-    if (signum == SIGINT)
+    
+
+if (signum == SIGINT)
         printf("\nSIGINT received by main\n");
     else
         printf("\nSIGALRM received by main\n");
@@ -374,9 +246,13 @@ void signalCall(int signum)
         else if (WIFSTOPPED(status))    /* child was stopped */
                 printf("User process was stopped by signal %d\n", WIFSTOPPED(status));
     }
-    	sem_unlink(shmPalin);
-	sem_unlink(shmNotPalin);
+  
+  	sem_unlink("Palin");
+        sem_unlink("NotPalin");
+
+
 	kill(0, SIGTERM);
+
     //clean up program before exit (via interrupt signal)
     shmdt(shared); //detaches a section of shared memory
     shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory
@@ -407,13 +283,7 @@ void helpMenu() {
 		printf("---------------------------------------------------------------| Help Menu |--------------------------------------------------------------------------\n");
 		printf("-h help menu\n"); 
 		printf("-i inputfilename                      | inputfilename is where the filename reads and it will show error if there is no filename found on the directory.\n"); 
-		printf("                                      | output filename should be default name is output.dat  where the result is generated.\n");
-		printf("-o outputfilename                     | this command will use the default input file which is input.dat\n"); 
-		printf("  				      | then create an output result to outputfilename(Which is the user specified name of the file \n"); 
-		printf("-i inputfilename -o outputfilename    | this command can use inputfilename (user choose the name)\n");
-		printf("				      | generate output to the outputfilename(user choose the outputname) if it doesnt exist create one.\n"); 
 		printf("-n int				      | int for max processor\n"); 
-		printf("-s int				      | int for max child processor\n"); 
 		printf("------------------------------------------------------------------------------------------------------------------------------------------------------\n");
 }
 

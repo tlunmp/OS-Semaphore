@@ -1,0 +1,26 @@
+Ted Anthony L Uy
+CS4760
+Project 2
+
+The user can input file name and max processor and read the input and put it in the shared memory, the master then iterate to child 5 times to check if it is palindrom or not then save it to the palin.out if it is palin or nopalin if it is not palindrom, the goal of this project is to familiarize using semaphores.
+
+
+SYNTAX
+-h  			help menu
+
+-i  inputfilename	inputfilename is where the filename reads and it will show error if there is no filename found on the directory. output filename 
+			should be default name is "output.dat"  where the result is generated.
+-n			max processor
+
+make			builds and creates exectuable 'p1'
+make clean		cleans object files and executables
+
+
+HOW ERROR CHECKING WORKS:
+shmt is error
+file error check is there
+
+I put sleep for 2 seconds whenever you enter critical section and before exiting critical section
+whenever you enter or exit critical section i put palin or notpalin is entering critical section so it is easier to see if the program is working.
+implemented -n and -i 
+timer for 25 seconds
