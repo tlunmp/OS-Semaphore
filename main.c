@@ -221,6 +221,9 @@ void forkProcess(int maxChildProcess, int numChildProcess, char *inputFileName, 
 	//unlink the semaphore		
 	sem_unlink("Palin");
 	sem_unlink("NotPalin");
+
+	sem_close(shmPalin);
+	sem_close(shmNotPalin);
 	
 	shmdt(shared); //detaches a section of shared memory
     	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
@@ -250,6 +253,9 @@ if (signum == SIGINT)
   	sem_unlink("Palin");
         sem_unlink("NotPalin");
 
+	sem_close(shmPalin);
+	sem_close(shmNotPalin);
+	
 
 	kill(0, SIGTERM);
 

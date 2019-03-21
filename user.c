@@ -156,7 +156,7 @@ int main (int argc, char *argv[]) {
 			return 0;
 		}
 
-fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
+		fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
 		fclose(f);
 
 		//chek if it is not palin drom else if it is palindrome do sem_post when exiting the critical section
@@ -176,7 +176,8 @@ fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
     			}
     
 	 		ptm = localtime(&rawtime);
-    
+   
+ 			//localtime error
 		 	 if (ptm == NULL) { 
       				  fprintf(stderr, "The localtime() function failed");
     				  return 1;
@@ -202,7 +203,7 @@ fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
     
  			ptm = localtime(&rawtime);
     
-
+			//local time error
 	 		 if (ptm == NULL) { 
       				  fprintf(stderr, "The localtime() function failed");
     			 	 return 1;
@@ -218,6 +219,9 @@ fprintf(f,"%d %d %s\n",getpid(),index,shared[index].text);
 
 	}
 
+	sem_close(shmPalin);
+	sem_close(shmNotPalin);
+	
 	
 	shmdt(shared); //detaches a section of shared memory
     	shmctl(shmid, IPC_RMID, NULL);  // deallocate the memory    	
@@ -245,8 +249,7 @@ void signalCallback (int signum)
 {
     printf("\nSIGTERM received by worker\n");
 
-    //Cleanup
-
+    	//Cleanup
 	sem_unlink("Palin");
 	sem_unlink("notPalin");
         shmdt(shmPtr);
